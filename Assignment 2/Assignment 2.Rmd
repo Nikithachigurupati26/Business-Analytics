@@ -1,0 +1,158 @@
+---
+title: "Business Analytics Assignment 2"
+author: "Nikitha Chigurupati"
+date: "10/30/2022"
+output:
+  word_document: default
+  html_document: default
+---
+#Importing the Dataset
+```{r}
+Online_Retail<- read.csv("C:/Users/Nikitha/Downloads/Online_Retail.csv")
+summary(Online_Retail)
+```
+
+#Loading the Packages
+```{r}
+library(magrittr)
+library(dplyr)
+library(zoo)
+```
+
+#QUESTION 1: Show the breakdown of the number of transactions by countries i.e. how many transactions are in the dataset for each country(consider all records including cancelled transactions). Show this in total number and also in percentage.Show only countries accounting for more than 1% of the total transactions. 
+
+```{r}
+Online_Retail %>% group_by(Country) %>% summarise(n())
+
+Online_Retail %>% group_by(Country) %>% summarise(percent =100 *n()/nrow(Online_Retail))
+
+Online_Retail %>% group_by(Country) %>% summarise(percent =100 *n()/nrow(Online_Retail)) %>% filter(Country>0.01) 
+
+```
+
+
+#QUESTION 2: Create a new variable ‘TransactionValue’ that is the product of the exising ‘Quantity’ and ‘UnitPrice’ variables. Add this variable to the dataframe. 
+```{r}
+TransactionValue <-  Online_Retail$Quantity * Online_Retail$UnitPrice
+
+Online_Retail <- cbind(Online_Retail, TransactionValue)
+head(Online_Retail)
+colnames(Online_Retail)
+
+```
+
+#QUESTION 3: Using the newly created variable,TransactionValue, show the breakdown of transactionvaluesby countries i.e. how much money in total has been spent each country. Show this in total sum of transaction values. Show only countries with total transaction exceeding 130,000 British Pound.
+```{r}
+Online_Retail%>%group_by(Country)%>%summarise(Sum_of_Transaction_values = sum(TransactionValue))%>%filter(Sum_of_Transaction_values >130000)
+```
+
+#QUESTION 5: Plot the histogramof transaction values from Germany.
+```{r}
+hist(x=log(Online_Retail$TransactionValue[Online_Retail$Country=="Germany"]),xlab = "TransactionValue",col = 'violet' ,main = 'Germany Transaction',ylab = 'Frequency')
+
+```
+
+#QUESTION 6: Which customer had the highest number of transactions? Which customer is most valuable i.e. highest total sum of transactions
+```{r}
+#The customer that had the highest number  of transanctions.
+Online_Retail %>%group_by(CustomerID)%>%summarise(CustomerTransaction = n())%>%filter(CustomerID != "NA")%>%filter(CustomerTransaction ==max(CustomerTransaction))
+
+#The most valuable customer that had the highest total sum of transanction.
+Online_Retail%>%group_by(CustomerID)%>%summarise(total.transaction.by.each.customer = sum(TransactionValue))%>%arrange(desc(total.transaction.by.each.customer))%>%filter(CustomerID != "NA")%>%filter(total.transaction.by.each.customer ==max(total.transaction.by.each.customer) )
+
+```
+
+#QUESTION 7 :Calculate  the  percentage  of  missing  values  for  each variable  in the  dataset
+```{r}
+colMeans(is.na(Online_Retail))
+```
+
+#QUESTION 8 :What are the number oftransactions withmissing CustomerID records by countries? 
+```{r}
+Online_Retail%>% group_by(Country)%>%filter(is.na(CustomerID))%>%summarise(Missing_CustomerID=n())
+```
+
+#QUESTION 10: In the retail sector, it is very important to understand the return rate of the goods purchased by customers.  In  this  example,  we  can  define  this  quantity,  simply,as  the  ratio  of  the  numberof transactions cancelled (regardless of the transaction value) over the total number of transactions. With this definition, what is the return rate for the French customers? Consider the cancelled transactions as those where the ‘Quantity’ variable hasa negative value.
+
+```{r}
+Returns <-nrow(Online_Retail%>%group_by(CustomerID)%>%filter((Country=='France')&(TransactionValue<0)&(CustomerID != 'Na')))
+
+Totalfrenchcustomer<-nrow(Online_Retail%>%group_by(CustomerID)%>%filter((Country=='France')&(CustomerID != 'Na')))
+
+Returns/Totalfrenchcustomer*100
+
+```
+
+#QUESTION 11: What is the product that has generated the highest revenue for the retailer?
+```{r}
+Total_customer1<-Online_Retail%>%group_by(Description,StockCode)%>%summarise(n=sum(TransactionValue))%>%arrange(desc(n))
+
+Total_customer1[Total_customer1['n']==max(Total_customer1['n']),]
+```
+
+#QUESTION 12: How many unique customers are represented in the dataset? 
+```{r}
+length(unique(Online_Retail$CustomerID))
+```
+
+#GOLDEN QUESTION: QUESTION- 4
+```{r}
+Temp=strptime(Online_Retail$InvoiceDate,format='%m/%d/%Y %H:%M',tz='GMT')
+Online_Retail$New_Invoice_Date<-as.Date(Temp)
+Online_Retail$New_Invoice_Date[20000]-Online_Retail$New_Invoice_Date[10]
+Online_Retail$Invoice_Day_Week=weekdays(Online_Retail$New_Invoice_Date)
+Online_Retail$New_Invoice_Hour =as.numeric(format(Temp,"%H"))
+Online_Retail$New_Invoice_Month = as.numeric(format(Temp, "%m"))
+```
+
+```{r}
+#a)Show the percentage of transactions (by numbers) by days of the week
+
+Online_Retail%>%group_by(Invoice_Day_Week)%>%summarise(No.of.transaction=(n()))%>%
+mutate(No.of.transaction,'percent'=(No.of.transaction*100)/sum(No.of.transaction))
+```
+
+
+```{r}
+#b)Show  the  percentage  of  transactions  (by transaction  volume)  bydays  of  the  week
+
+Online_Retail%>%group_by(Invoice_Day_Week)%>%summarise(Volume.of.transaction=(sum(TransactionValue)))%>%
+mutate(Volume.of.transaction,'percent'=(Volume.of.transaction*100)/sum(Volume.of.transaction))
+```
+
+
+```{r}
+#c)Show the percentage of transactions (by transaction volume) by month of the year 
+
+Online_Retail%>%group_by(New_Invoice_Month)%>%summarise(Volume.By.Month=sum(TransactionValue))%>%
+mutate(Volume.By.Month,'Percent'=(Volume.By.Month*100)/sum(Volume.By.Month))
+```
+
+
+```{r}
+#d)What was the date with the highest number of transactions from Australia? 
+
+No_of_Trans_Aust<-Online_Retail%>%group_by(New_Invoice_Date,Country)%>%filter(Country=='Australia')%>%
+summarise(Number=sum(Quantity),amount=sum(TransactionValue))%>%arrange(desc(Number))
+No_of_Trans_Aust
+
+No_of_Trans_Aust<-No_of_Trans_Aust[No_of_Trans_Aust['Number']==max(No_of_Trans_Aust['Number']),] 
+No_of_Trans_Aust
+```
+
+
+```{r}
+#e)The company needs to shut  down the  website  for two consecutivehours for maintenance. What would be the hour of the day to start this so that the distribution is at minimum for the customers? The responsible IT team is available from 7:00 to 20:00 every day.
+
+Fp=Online_Retail%>%group_by(New_Invoice_Hour)%>%summarise(Total.transaction= n())
+Fp
+Sp<-rollapply(Fp['Total.transaction'],2,sum)%>%index(min(Sp))
+Sp
+print('The best time to shut down the website for two consecutive hours is between 7am-9am')
+```
+
+#GOLDEN QUESTION: QUESTION 9 :On average, how often the costumers comeback to the website for their next shopping? 
+```{r}
+Avg<-Online_Retail%>%group_by(CustomerID)%>%summarise(diff_consecutivedays= diff(New_Invoice_Date))%>%filter(diff_consecutivedays>0)
+print(paste('The average  number  of  days  between  consecutive  shopping is',mean(Avg$diff_consecutivedays)))
+```
