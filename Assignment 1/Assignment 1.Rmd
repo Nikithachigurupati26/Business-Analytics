@@ -1,0 +1,46 @@
+---
+title: "Assignment 1"
+author: "Nikitha Chigurupati"
+date: "9/19/2022"
+output:
+  html_document: default
+  word_document: default
+---
+#1. Installed the ISLR Library using the command install.packages(ISLR)
+
+#2.Calling the ISLR Library, Summary of Carseats and Finding the number of rows.
+```{r}
+library(ISLR)
+summary(Carseats)
+nrow(Carseats)
+```
+
+
+#3.Finding the Maximum Value of Advertising attribute.
+```{r}
+max(Carseats$Advertising)
+```
+
+#4.Finding the IQR Value of Price attribute.
+```{r}
+IQR(Carseats$Price)
+```
+
+
+#5. Plotting the Sales over Price and finding the correlation. 
+```{r}
+library(ggplot2)
+ggplot(Carseats) +
+  aes(
+    x = Sales,
+    y = Price
+  ) +
+  geom_point(shape = "circle", size = 1.2, colour = "#112446") +
+  theme_minimal()
+#As we see a downward slope or negative slope, this indicates that if Sales increases the Price decrease and vice-Versa.
+```
+
+```{r}
+cor(Carseats$Price, Carseats$Sales)
+#There is a Negative correlation between sales and price. 
+```
