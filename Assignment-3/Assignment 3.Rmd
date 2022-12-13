@@ -1,0 +1,144 @@
+---
+title: "BA Assignment-3"
+author: "Nikitha Chigurupati"
+date: "11/13/2022"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r}
+#1)Run the following code in R-studio to create two variables X and Y.
+set.seed(2017) 
+X=runif(100)*10 
+Y=X*4+3.45 
+Y=rnorm(100)*0.29*Y+Y 
+```
+
+```{r}
+#a)Plot Y against X. Include a screenshot of the plot in your submission. Using the File menu you can save the graph as a picture on your computer.  Based on the plot do you think we can fit a linear model to explain Y based on X?
+  
+plot(Y~X,xlab='X',ylab='Y',col='purple')
+abline(lsfit(X, Y),col = "black")
+```
+
+```{r}
+#b)Construct a simple linear model of Y based on X. Write the equation that explains Y based on X. What is the accuracy of this model?
+  
+fitting_simple_linear_model <- lm(Y ~ X)
+summary(fitting_simple_linear_model)
+
+#Y=4.4655+3.6108*X
+#Accuracy is 0.6517 or 65%
+```
+
+```{r}
+#c)	How the Coefficient of Determination, R2, of the model above is related to the correlation coefficient of X and Y? (5 marks)
+
+cor(X,Y)^2
+```
+
+
+```{r}
+#2.We will use the ‘mtcars’ dataset for this question.The dataset is already included in your R distribution. The dataset shows some of the characteristics of different cars. The following shows few samples (i.e.the first 6 rows) of the dataset.The description of the dataset can be found here.
+
+head(mtcars)
+```
+
+```{r}
+#a)James wants to buy a car. He and his friend,Chris,have different opinions about the Horse Power (hp) of cars. James think the weight of a car (wt) can be used to estimate the Horse Power of the car while Chris thinks the fuel consumption expressed in Mile Per Gallon (mpg), is a better estimator of the (hp).Who do you think is right? Construct simple linear models using mtcars data to answer the question.
+
+
+#LINEAR MODELS OF HORSE POWER(HP) AND WEIGHT (WT):
+plot(mtcars$hp~mtcars$wt,xlab='Weight (WT)',ylab='Horse Power(hp)',col='blue')
+abline(lsfit(mtcars$wt,mtcars$hp),col = "black")
+Model_HP_WT<-lm(formula =hp~wt, data = mtcars )
+summary(Model_HP_WT)
+#Accuracy of Model_HP_WT is 0.4339 or 43.39%
+
+
+#LINEAR MODELS OF HORSE POWER(HP) AND MILE PER GALLON (MPG):
+plot(mtcars$hp~mtcars$mpg,xlab='MILE PER GALLON (MPG)',ylab='HORSE POWER (HP)',col='blue')
+abline(lsfit(mtcars$mpg, mtcars$hp),col = "black")
+Model_HP_MPG<-lm(formula =hp~mpg, data = mtcars )
+summary(Model_HP_MPG)
+#Accuracy of the model_HP_MPG is 0.6024 OR 60.24%
+
+
+#CONCLUSION: Mile Per Gallon (MPG) is a better estimator of the HORSE POWER (HP)
+```
+
+```{r}
+#b)Build a model that uses the number of cylinders (cyl) and the mile per gallon (mpg) values of a car to predict the car Horse Power (hp).Using this model, what is the estimated Horse Power of a car with 4 calendar and mpg of 22?
+
+Model_cyl_mpg<-lm(hp~cyl+mpg,data = mtcars)
+summary(Model_cyl_mpg)
+
+Estimated_HP<-predict(Model_cyl_mpg,data.frame(cyl=4,mpg=22))
+Estimated_HP
+```
+
+
+```{r}
+#3.For this question, we are going to use BostonHousing dataset. The dataset is in ‘mlbench’ package, so we first need to install the package, call the library and load the dataset using the following commands
+
+library(mlbench)
+data(BostonHousing)
+
+#a)Build a model to estimate the median value of owner-occupied homes (medv)based on the following variables: crime crate (crim), proportion of residential land zoned for lots over 25,000 sq.ft (zn), the local pupil-teacher ratio (ptratio) and weather the whether the tract bounds Chas River(chas). Is this an accurate model? (Hint check R2 ) 
+
+
+boston <- lm(formula = BostonHousing$medv ~ BostonHousing$crim + BostonHousing$zn + BostonHousing$ptratio + BostonHousing$chas, data = BostonHousing)
+
+summary(boston)
+
+#A house near the Chas River is $4584 more expensive than a house not near the river,according to the predicted coefficient.
+```
+
+	
+```{r}
+#b)Use the estimated coefficient to answer these questions? 
+
+#I.Imagine two houses that are identical in all aspects but one bounds the Chas River and the other does not. Which one is more expensive and by how much?
+
+Boston_1 <- lm(formula = BostonHousing$medv ~ BostonHousing$chas, data = BostonHousing)
+
+#using the coefficients, the value of both the houses can be calculated
+House_1 <- Boston_1$coefficients[1] + Boston_1$coefficients[2]*0
+House_2 <- Boston_1$coefficients[1] + Boston_1$coefficients[2]*1
+
+print(paste('House with chas and more expensive by ', House_2 - House_1))
+
+
+```
+
+```{r}
+#II.Imagine two houses that are identical in all aspects but in the neighborhood of one of them the pupil-teacher ratio is 15 and in the other one is 18. Which one is more expensive and by how much?
+
+Boston_2 <- lm(formula = BostonHousing$medv ~ BostonHousing$ptratio , data = BostonHousing)
+Boston_2
+
+# coefficients can be used to find the values of both houses.
+House_3 <- Boston_2$coefficients[1] + Boston_2$coefficients[2] * 15
+
+House_4 <- Boston_2$coefficients[1] + Boston_2$coefficients[2] * 18
+
+print(paste('The house in which the pupil-teacher ratio of the two houses is 15 and is more expensive by ', House_3 - House_4))
+```
+
+```{r}
+#c)Which of the variables are statistically important (i.e. related to the house price)? Hint: use the p-values of the coefficients to answer.
+
+summary(BostonHousing)
+
+## F-statistic: 70.41 on 4 and 501 DF,  p-value: < 2.2e-16
+#It can be concluded that none of the variables are statistically important as the P values of the model are less than 0.05.
+```
+
+```{r}
+#d)Use the anova analysis and determine the order of importance of these four variables.(5 marks) 
+anova(boston)
+#We can see that the variety (sum squared) defined with the aid of using the crim variable is drastically better than different variables. We should bet this as including the crim, drastically stepped forward the model. Still we will see that a huge part of the variety is unexplained, this is proven with the aid of using residuals.
+#The order of significance is crim, ptratio,zn, chas
+```
+
