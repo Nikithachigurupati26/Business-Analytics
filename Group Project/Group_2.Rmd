@@ -1,0 +1,297 @@
+---
+title: "FINAL PROJECT"
+author: "GROUP - 2"
+date: '2022-12-08'
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+```{r}
+library(readr)
+library(tidyverse)
+library(caret)
+library(pROC)
+library(ggcorrplot)
+library(party)
+library(rpart)
+library(RANN)
+library(rpart.plot)
+library(class)
+library(dplyr)
+library(tidyr)
+library(rattle)
+library(corrplot)
+library(ranger)
+```
+
+#Importing the Churn dataset
+```{r,message=FALSE}
+Churn_Train<- read.csv("C:/Users/Nikitha/Downloads/Churn_Train.csv")
+str(Churn_Train)
+```
+
+
+```{r,message=FALSE}
+#showing the Summary of statistics in the dataset
+summary(Churn_Train)
+```
+
+
+#Converting the categorical variables to numeric
+```{r}
+Churn_Train$international_plan <- as.factor(Churn_Train$international_plan)
+Churn_Train$voice_mail_plan <- as.factor(Churn_Train$voice_mail_plan)
+Churn_Train$churn <- as.factor(Churn_Train$churn)
+Churn_Train$state <- as.factor(Churn_Train$state)
+Churn_Train$area_code <- as.factor(Churn_Train$area_code)
+
+Churn_true  <- subset(Churn_Train, Churn_Train$churn == "yes")
+Churn_false <- subset(Churn_Train, Churn_Train$churn == "no")
+```
+
+
+```{r}
+#Number of churn count of Yes/No
+Count_Churn<-table(Churn_Train$churn)
+Count_Churn
+```
+
+#Checking the skewness,Distribution of each variable in the dataset
+```{r}
+Churn_Train[, 6:19] %>%
+  gather(key = Variable, value = Value) %>%
+  ggplot() +
+  geom_histogram(aes(x = Value), fill = "violet") +
+  facet_wrap(~Variable, scales='free') +
+  theme_classic() +
+  theme(aspect.ratio = 0.5, axis.title = element_blank(), panel.grid = element_blank())
+```
+The above skewness shows a bell curve distribution of data for maximum amount of the data or variables. It is seen that the “Total day minutes” and “Total evening minutes” have a significant Number of outliers. It is evident “Customer_Service_calls” has an irregular skewness.
+
+
+#Determining the number of customer churn
+```{r}
+barplot(Count_Churn,xlab ="Churn",ylab="Count" ,col = "violet" ,main = "No.of Customers based on the churn data")
+```
+The customer churn analyzed is 483 out of 3333.Which is 2850 customers have stayed with the current provider.
+
+
+#Determining the number of customers based on the Area code
+```{r}
+C_Count_area_code <- Churn_true %>% group_by(area_code) %>% summarise(Churn_area_code_count = n())
+Churnonareacode <- Churn_Train %>% group_by(Churn_Train$area_code, Churn_Train$churn) %>% summarise(count =n())
+
+ggplot(C_Count_area_code) +
+  aes(x = area_code, weight = Churn_area_code_count) +
+  geom_bar(fill = "#557CC2") +
+  labs(x = "Area_code", y = "Count", title = "Churn Rate by Area_code") +
+  theme_light()
+```
+The area_code_415 has the highest of customer churn rate.
+
+
+
+#Determining the number of customer churn by the international charge
+```{r}
+ggplot(Churn_Train) +
+  aes(x = churn, y = total_intl_charge , fill = churn) +
+  geom_boxplot(shape = "Square") +
+  scale_fill_hue(direction = 1) +
+  labs(x = "Churn", y = "Total_International_Charge",title = "No.of churn by the Total International Charge")
+  theme_minimal()+
+  theme(plot.title = element_text(size = 10L,
+                                  face = "bold", hjust = 0.5))  
+```
+
+
+
+#Determine the number of customers churn due to international plan and voice mail plans.
+```{r}
+table(International_plan=Churn_Train$international_plan, 
+      Churn= Churn_Train$churn )
+
+table( voice__mail__plan=   Churn_Train$voice_mail_plan, 
+       Churn_Train$churn)
+```
+28% of customers are lost by the International plan and 16% of customers are lost by the voice mail plan.
+
+
+
+#Data Cleaning:-
+```{r}
+#Filling the missing value with mice package
+sum(is.na(Churn_Train))
+
+Churn_Train<-Churn_Train[complete.cases(Churn_Train),]
+colMeans(is.na(Churn_Train))
+```
+
+```{r}
+str(Churn_Train)
+churn_yes<-Churn_Train %>% filter(churn=='yes')
+```
+
+
+
+#Corrleation plot 
+```{r}
+Churn_Train_Num <- Churn_Train[6:19]
+corrplot(cor(Churn_Train_Num))
+```
+
+Positive Correlation-
+Total day minutes & total eve minutes
+Total night calls & total night charges 
+Total intl calls & total intl charge
+
+Negative Correlation-
+Number of service calls & Total day charge
+
+
+#Data Partitioning
+```{r}
+set.seed(123)
+Index<- createDataPartition(Churn_Train$churn,p=0.8,list=FALSE)
+Train<-Churn_Train[Index,]
+Validation <- Churn_Train[-Index,]
+```
+
+
+#Building a Logistic Regression model:- 
+```{r}
+set.seed(123)
+Logistic_Model <- glm(churn~.,data=Train ,family = "binomial" )
+
+#summary Logistic_Model
+pred_Validation<-predict(Logistic_Model,Validation,type="response")
+head(pred_Validation)
+
+Resultcheck1<-ifelse(pred_Validation > 0.5,'yes','no')
+```
+
+
+```{r}
+#Accuracy Check
+Error1<-mean(Resultcheck1!=Validation$churn)
+Acc1 <-1- Error1
+print(Acc1)
+```
+
+
+```{r}
+#Plotting the ROC (Receiver Operating Characteristic)
+plot.roc(Validation$churn,pred_Validation)
+```
+
+
+#Confusion Matrix of Logistic Regression Model
+```{r}
+set.seed(123)
+Logistic_Confusionmatrix <- confusionMatrix(as.factor(Resultcheck1),as.factor(Validation$churn))
+Logistic_Confusionmatrix
+```
+The following conclusions have been made :- 
+1. Accuracy - 0.87 or 87.26%
+2. Sensitivity -  0.98 or 98%
+3. Specificity:- 0.23 or 23.68%
+
+
+
+#Building a Decision Tree Model
+```{r}
+set.seed(123)
+Decision_Tree_Model<- rpart(churn ~ .,data=Train,method = 'class') 
+head(Decision_Tree_Model$splits)
+```
+
+```{r}
+#Predicting the probability
+Prob_Decision_Tree <- predict(Decision_Tree_Model, newdata = Validation, type = "prob")
+```
+
+
+```{r}
+#Determining AUC Value
+roc(Validation$churn,Prob_Decision_Tree[,2])
+```
+
+
+#Confusion Matrix for Decision Tree Model
+```{r}
+set.seed(123)
+Class_Decision_Tree <- predict(Decision_Tree_Model, newdata = Validation, type = "class")
+confusionMatrix(as.factor(Class_Decision_Tree),as.factor(Validation$churn))
+```
+
+The following conclusions have been made :- 
+1. Accuracy -  0.93 or 93.16% 
+2. Sensitivity - 0.98 or 98.44%
+3. Specificity:- 0.61 or 61.84%
+
+
+From the above model, the Decision Tree Model is the optimal model for this dataset.
+It is the best model to use as it has higher accuracy than the Logistical Regression Model. Though the Sensitivities of both the models are equal, Decision Tree has a higher specificity. Hence, Decision Tree Model is the right and optimal Model to use.
+
+
+
+```{r}
+set.seed(123)
+ABC_Wireless_Model<- rpart(churn ~ .,data= Churn_Train,method = 'class')
+```
+
+```{r}
+#Determining the Model Splits.
+head(ABC_Wireless_Model$splits)
+#Plotting Decision Tree
+fancyRpartPlot(ABC_Wireless_Model)
+rpart.plot(ABC_Wireless_Model, cex=0.5)
+```
+
+```{r}
+#Probability Prediction
+Prob_decision_tree <- predict(ABC_Wireless_Model, newdata = Churn_Train, type = "prob")
+
+#Determining the AUC Value
+roc(Churn_Train$churn,Prob_decision_tree[,2])
+```
+
+
+```{r}
+set.seed(123)
+load("C:\\Users\\Nikitha\\Downloads\\Customers_To_Predict.RData")
+
+dim(Customers_To_Predict)
+count(Customers_To_Predict)
+summary(Customers_To_Predict)
+```
+
+
+```{r}
+# Check for NA Values
+colMeans(is.na(Customers_To_Predict))
+```
+
+
+```{r}
+Churn_Prob <- predict(ABC_Wireless_Model,Customers_To_Predict,type = "prob")
+head(Churn_Prob)
+
+Predict_Churn <- predict(ABC_Wireless_Model,Customers_To_Predict,type = "class")
+head(Predict_Churn)
+
+Predict_Churn<- as.data.frame(Predict_Churn)
+summary(Predict_Churn)
+```
+
+```{r}
+ggplot(Predict_Churn) +
+ aes(x = Predict_Churn) +
+ geom_bar(fill = "orange")+
+ labs(x = "Customers Churning",
+ y = "No. of Customers", title = "Number of Customers to Churn") +
+ theme_minimal() +
+ theme(plot.title = element_text(size = 14L,
+ face = "bold", hjust = 0.5), axis.title.y = element_text(size = 14L, face = "bold"), axis.title.x = element_text(size = 14L,face = "bold"))
+```
+From the above, it is concluded that 168 customers are churning out of 1600 customers.
